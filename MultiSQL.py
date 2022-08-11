@@ -15,20 +15,26 @@ import subprocess
 import sys
 
 
-def Conn (strDBType,strServer,strDBUser,strDBPWD,strInitialDB):
+def Conn (*,DBType,Server,DBUser,DBPWD,Database):
   """
   Function that handles establishing a connection to a specified database
   imports the right module depending on database type
   Parameters:
-    strDBType   : The type of database server to connect to
-                  Supported server types are mssql, mysql and postgres
-    strServer   : Hostname for the database server
-    strDBUser   : Database username
-    strDBPWD    : Password for the database user
-    strInitialDB: The name of the database to use
+    DBType : The type of database server to connect to
+                Supported server types are mssql, mysql and postgres
+    Server : Hostname for the database server
+    DBUser : Database username
+    DBPWD  : Password for the database user
+    Database  : The name of the database to use
   Returns:
     Connection object to be used by query function, or an error string
   """
+
+  strDBType = DBType
+  strServer = Server
+  strDBUser = DBUser
+  strDBPWD = DBPWD
+  strInitialDB = Database
 
   global dboErr
   global dbo
@@ -87,23 +93,23 @@ def Conn (strDBType,strServer,strDBUser,strDBPWD,strInitialDB):
   except dboErr.InterfaceError as err:
     return ("Interface Error: unable to connect: {}".format(err))
 
-def Query (strSQL,db):
+def Query (*,SQL,dbConn):
   """
   Function that handles executing a SQL query using a predefined connection object
   imports the right module depending on database type
   Parameters:
-    strSQL: The query to be executed
-    db    : The connection object to use
+    SQL    : The query to be executed
+    dbConn : The connection object to use
   Returns:
     NoneType for queries other than select, DBCursor object with the results from the select query
     or error message as a string
   """
-
+  strSQL = SQL
   try:
-    dbCursor = db.cursor()
+    dbCursor = dbConn.cursor()
     dbCursor.execute(strSQL)
     if strSQL[:6].lower() != "select":
-      db.commit()
+      dbConn.commit()
       return None
     else:
       return dbCursor
