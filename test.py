@@ -63,13 +63,12 @@ def main():
   strDBPWD = FetchEnv("DBPWD")
   strDBUser = FetchEnv("DBUSSER")
   strDBType = FetchEnv("STORE")
-  strSQL = FetchEnv("SQL")  # "SELECT strkey, strValue FROM tblvault;"
+  strTable = FetchEnv("TABLE")  # "SELECT strkey, strValue FROM tblvault;"
 
   dbConn = ""
   dbCursor = None
 
-  strInitialDB = "test"
-  strTable = "tblTest"
+  #strTable = "tblTest"
   dictColumn = {}
   dictColumn["iID"] = ["int", "not null"]
   dictColumn["strKey"] = ["text","not null"]
@@ -88,7 +87,7 @@ def main():
       print("Type {} is unexpected".format(dictColumn[strCol][0]))
 
   for strDBType in lstDBTypes:
-    iLineNum = 1
+    iLineNum = 0
     dbConn = MultiSQL.Conn(DBType=strDBType, Server=strServer,
                          DBUser=strDBUser, DBPWD=strDBPWD, Database=strInitialDB)
     strTableCreate = "CREATE TABLE "
@@ -128,6 +127,9 @@ def main():
         strReturn = dbCursor.fetchone()
         if strReturn[0] is None:
           dbCursor = MultiSQL.Query(SQL=strTableCreate, dbConn=dbConn)
+          print("Query complete.")
+          if isinstance(dbCursor, str):
+            LogEntry("Results is only the following string: {}".format(dbCursor), True)
         else:
           print("Table already exists")
       else:
