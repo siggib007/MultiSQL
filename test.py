@@ -36,7 +36,7 @@ def LogEntry(strMsg, bAbort=False):
   if bAbort:
     print("{} is exiting abnormally on {}".format(
         strScriptName, strScriptHost))
-    if dbConn != "":
+    if not isinstance (dbConn,str):
       dbConn.close()
     sys.exit(9)
 
@@ -63,7 +63,8 @@ def main():
   strDBPWD = FetchEnv("DBPWD")
   strDBUser = FetchEnv("DBUSSER")
   strDBType = FetchEnv("STORE")
-  strTable = FetchEnv("TABLE")  # "SELECT strkey, strValue FROM tblvault;"
+  strTable = FetchEnv("TABLE") 
+  strVault = FetchEnv("VAULT")
 
   dbConn = ""
   dbCursor = None
@@ -75,7 +76,7 @@ def main():
   dictColumn["strValue"] = ["text", "not null"]
   strMSSQLtext = "varchar(MAX)"
   tStart = time.time()
-  lstDBTypes = ["mssql","mysql","postgres"]
+  lstDBTypes = ["mssql","mysql","postgres","sqlite"]
 
   dictValues = {}
   for strCol in dictColumn:
@@ -88,8 +89,13 @@ def main():
 
   for strDBType in lstDBTypes:
     iLineNum = 0
+    if strDBType == "sqlite":
+      strServer = strVault
     dbConn = MultiSQL.Conn(DBType=strDBType, Server=strServer,
                          DBUser=strDBUser, DBPWD=strDBPWD, Database=strInitialDB)
+    if isinstance(dbConn,str):
+      LogEntry("Connection failed: {}".format(dbConn))
+      continue
     strTableCreate = "CREATE TABLE "
     if strDBType != "mssql":
       strTableCreate += "IF NOT EXISTS "
@@ -118,8 +124,8 @@ def main():
     print(strDataSelect)
 
     if dbConn is not None:
-      LogEntry("{} Database connection established to DB {}".format(
-          strDBType, strInitialDB))
+      LogEntry("{} Database connection established to DB {} on server {}".format(
+          strDBType, strInitialDB, strServer))
       LogEntry("Executing the query : {}".format(strTableCreate))
       if strDBType == "mssql":
         strSQL = "select OBJECT_ID('{}', 'U')".format(strTable)
@@ -129,7 +135,7 @@ def main():
           dbCursor = MultiSQL.Query(SQL=strTableCreate, dbConn=dbConn)
           print("Query complete.")
           if isinstance(dbCursor, str):
-            LogEntry("Results is only the following string: {}".format(dbCursor), True)
+            LogEntry("Results is only the following string: {}".format(dbCursor))
         else:
           print("Table already exists")
       else:
@@ -139,28 +145,30 @@ def main():
       dbCursor = MultiSQL.Query(SQL=strDataInsert, dbConn=dbConn)
       print("Query complete.")
       if isinstance(dbCursor, str):
-        LogEntry("Results is only the following string: {}".format(dbCursor), True)
+        LogEntry("Results is only the following string: {}".format(dbCursor))
       print("Now Executing {}".format(strDataUpdate))
       dbCursor = MultiSQL.Query(SQL=strDataUpdate, dbConn=dbConn)
       print("Query complete.")
       if isinstance(dbCursor, str):
-        LogEntry("Results is only the following string: {}".format(dbCursor), True)
+        LogEntry("Results is only the following string: {}".format(dbCursor))
       print("Now Executing {}".format(strDataDelete))
       dbCursor = MultiSQL.Query(SQL=strDataDelete, dbConn=dbConn)
       print("Query complete.")
       if isinstance(dbCursor, str):
-        LogEntry("Results is only the following string: {}".format(dbCursor), True)
+        LogEntry("Results is only the following string: {}".format(dbCursor))
       print("Now Executing {}".format(strDataInsert))
       dbCursor = MultiSQL.Query(SQL=strDataInsert, dbConn=dbConn)
       print("Query complete.")
       if isinstance(dbCursor, str):
-        LogEntry("Results is only the following string: {}".format(dbCursor), True)
+        LogEntry("Results is only the following string: {}".format(dbCursor))
       print("Now Executing {}".format(strDataSelect))
       dbCursor = MultiSQL.Query(SQL=strDataSelect, dbConn=dbConn)
       print("Query complete.")
       if isinstance(dbCursor, str):
-        LogEntry("Results is only the following string: {}".format(dbCursor), True)
+        LogEntry("Results is only the following string: {}".format(dbCursor))
 
+      if isinstance(dbCursor, str):
+        continue
       if dbCursor is not None:
         lstHeader = []
         if dbCursor.description is not None:

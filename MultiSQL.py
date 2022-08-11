@@ -13,15 +13,16 @@ pip install psycopg2
 '''
 import subprocess
 import sys
+import os
 
 
-def Conn (*,DBType,Server,DBUser,DBPWD,Database):
+def Conn (*,DBType,Server,DBUser="",DBPWD="",Database=""):
   """
   Function that handles establishing a connection to a specified database
   imports the right module depending on database type
   Parameters:
     DBType : The type of database server to connect to
-                Supported server types are mssql, mysql and postgres
+                Supported server types are sqlite, mssql, mysql and postgres
     Server : Hostname for the database server
     DBUser : Database username
     DBPWD  : Password for the database user
@@ -38,6 +39,23 @@ def Conn (*,DBType,Server,DBUser,DBPWD,Database):
 
   global dboErr
   global dbo
+
+  try:
+    if strDBType == "sqlite":
+      import sqlite3
+      from sqlite3 import Error as dboErr
+      strVault = strServer
+      strVault = strVault.replace("\\", "/")
+      if strVault[-1:] == "/":
+        strVault = strVault[:-1]
+      if strVault[-3:] != ".db":
+        strVault += ".db"
+      lstPath = os.path.split(strVault)
+      if not os.path.exists(lstPath[0]):
+        os.makedirs(lstPath[0])
+      return sqlite3.connect(strVault)
+  except dboErr as err:
+    return("SQLite Connection failure {}".format(err))
 
   try:
     if strDBType == "mssql":
