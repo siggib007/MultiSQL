@@ -11,6 +11,8 @@ import os
 import time
 import sys
 import platform
+import uuid
+import random
 # End imports
 
 
@@ -65,73 +67,118 @@ def main():
 
   dbConn = ""
   dbCursor = None
-  iLineNum = 1
 
-  #strInitialDB = "test"
-  strTable = "tblVault"
+  strInitialDB = "test"
+  strTable = "tblTest"
   dictColumn = {}
-  dictColumn["strKey"] = "text"
-  dictColumn["strValue"] = "text"
+  dictColumn["iID"] = ["int", "not null"]
+  dictColumn["strKey"] = ["text","not null"]
+  dictColumn["strValue"] = ["text", "not null"]
   strMSSQLtext = "varchar(MAX)"
-  strTableCreate = "CREATE TABLE "
-  if strDBType != "mssql":
-    strTableCreate += "IF NOT EXISTS "
-  strTableCreate += strTable +"("
-  for strCol in dictColumn:
-    strTableCreate += "{} {} not null,"
-
-
-  strSQLSelect = "select * from tblVault"
-  strSQLInsert = "INSERT INTO tblvault (strkey,strValue) VALUES ('test15','asdfljalskdjfalj');"
-  strSQLUpdate = "UPDATE tblvault SET strValue = 'my testing stuff' WHERE strKey = 'test15';"
-
-  strSQL = strSQLInsert
   tStart = time.time()
-  dbConn = MultiSQL.Conn(DBType=strDBType, Server=strServer, DBUser=strDBUser, DBPWD=strDBPWD, Database=strInitialDB)
-  if dbConn is not None:
-    LogEntry("{} Database connection established to DB {}, executing the query : {}".format(
-        strDBType, strInitialDB, strSQL))
-    if strDBType == "mssql" and strSQL[:21] == "CREATE TABLE tblVault":
-      strSQL2 = "select OBJECT_ID('tblVault', 'U')"
-      dbCursor = MultiSQL.Query(strSQL2, dbConn)
-      strReturn = dbCursor.fetchone()
-      if strReturn[0] is None:
-        dbCursor = MultiSQL.Query(SQL=strSQL, dbConn=dbConn)
-      else:
-        print("Table already exists")
+  lstDBTypes = ["mssql","mysql","postgres"]
+
+  dictValues = {}
+  for strCol in dictColumn:
+    if dictColumn[strCol][0] == "text":
+      dictValues[strCol] = "'{}'".format(str(uuid.uuid4()))
+    elif dictColumn[strCol][0] == "int":
+      dictValues[strCol] = str(random.randint(10, 50))
     else:
-      dbCursor = MultiSQL.Query(SQL=strSQL, dbConn=dbConn)
-    print("Query complete. cursor: {} \n".format(type(dbCursor)))
-    if isinstance(dbCursor, str):
-      LogEntry("Results is only the following string: {}".format(dbCursor), True)
+      print("Type {} is unexpected".format(dictColumn[strCol][0]))
 
-  strSQL = strSQLUpdate
-  dbCursor = MultiSQL.Query(SQL=strSQL, dbConn=dbConn)
-  print("Query complete. cursor: {} \n".format(type(dbCursor)))
-  if isinstance(dbCursor, str):
-    LogEntry("Results is only the following string: {}".format(dbCursor), True)
+  for strDBType in lstDBTypes:
+    iLineNum = 1
+    dbConn = MultiSQL.Conn(DBType=strDBType, Server=strServer,
+                         DBUser=strDBUser, DBPWD=strDBPWD, Database=strInitialDB)
+    strTableCreate = "CREATE TABLE "
+    if strDBType != "mssql":
+      strTableCreate += "IF NOT EXISTS "
+    strTableCreate += strTable +"("
+    for strCol in dictColumn:
+      if strDBType == "mssql" and dictColumn[strCol][0] == "text":
+        strColType = strMSSQLtext
+      else:
+        strColType = " ".join(dictColumn[strCol])
+      strTableCreate += "{} {}, ".format(strCol,strColType)
+    strTableCreate = strTableCreate[:-2] + ");"
+    print(strTableCreate)
+    strDataInsert = "INSERT INTO {}({}) VALUES({});".format(
+        strTable, ",".join(dictColumn.keys()), ",".join(dictValues.values()))
+    print(strDataInsert)
+    lstKeys = list(dictColumn.keys())
+    lstValues = list(dictValues.values())
+    strDataUpdate = "UPDATE {} SET {} = {}, {} = {} WHERE {} = {}".format(
+        strTable, lstKeys[1], lstValues[2], lstKeys[2], lstValues[1], lstKeys[0], lstValues[0])
+    print(strDataUpdate)
+    strDataDelete = "DELETE FROM {} WHERE {} = {}".format(
+        strTable, lstKeys[0], lstValues[0])
+    print(strDataDelete)
+    strDataSelect = "SELECT {} FROM {};".format(
+        ", ".join(dictColumn.keys()), strTable)
+    print(strDataSelect)
 
-  strSQL = strSQLSelect
-  dbCursor = MultiSQL.Query(SQL=strSQL, dbConn=dbConn)
-  print("Query complete. cursor: {} \n".format(type(dbCursor)))
-  if isinstance(dbCursor, str):
-    LogEntry("Results is only the following string: {}".format(dbCursor), True)
+    if dbConn is not None:
+      LogEntry("{} Database connection established to DB {}".format(
+          strDBType, strInitialDB))
+      LogEntry("Executing the query : {}".format(strTableCreate))
+      if strDBType == "mssql":
+        strSQL = "select OBJECT_ID('{}', 'U')".format(strTable)
+        dbCursor = MultiSQL.Query(SQL=strSQL, dbConn=dbConn)
+        strReturn = dbCursor.fetchone()
+        if strReturn[0] is None:
+          dbCursor = MultiSQL.Query(SQL=strTableCreate, dbConn=dbConn)
+        else:
+          print("Table already exists")
+      else:
+        dbCursor = MultiSQL.Query(SQL=strTableCreate, dbConn=dbConn)
 
-  if dbCursor is not None:
-    lstHeader = []
-    if dbCursor.description is not None:
-      for temp in dbCursor.description:
-        lstHeader.append(temp[0])
-      print(" | ".join(lstHeader))
-      print("="*120)
+      print("Now Executing {}".format(strDataInsert))
+      dbCursor = MultiSQL.Query(SQL=strDataInsert, dbConn=dbConn)
+      print("Query complete.")
+      if isinstance(dbCursor, str):
+        LogEntry("Results is only the following string: {}".format(dbCursor), True)
+      print("Now Executing {}".format(strDataUpdate))
+      dbCursor = MultiSQL.Query(SQL=strDataUpdate, dbConn=dbConn)
+      print("Query complete.")
+      if isinstance(dbCursor, str):
+        LogEntry("Results is only the following string: {}".format(dbCursor), True)
+      print("Now Executing {}".format(strDataDelete))
+      dbCursor = MultiSQL.Query(SQL=strDataDelete, dbConn=dbConn)
+      print("Query complete.")
+      if isinstance(dbCursor, str):
+        LogEntry("Results is only the following string: {}".format(dbCursor), True)
+      print("Now Executing {}".format(strDataInsert))
+      dbCursor = MultiSQL.Query(SQL=strDataInsert, dbConn=dbConn)
+      print("Query complete.")
+      if isinstance(dbCursor, str):
+        LogEntry("Results is only the following string: {}".format(dbCursor), True)
+      print("Now Executing {}".format(strDataSelect))
+      dbCursor = MultiSQL.Query(SQL=strDataSelect, dbConn=dbConn)
+      print("Query complete.")
+      if isinstance(dbCursor, str):
+        LogEntry("Results is only the following string: {}".format(dbCursor), True)
 
-      for dbRow in dbCursor:
-        print(" | ".join(dbRow))
-        iLineNum += 1
+      if dbCursor is not None:
+        lstHeader = []
+        if dbCursor.description is not None:
+          for temp in dbCursor.description:
+            lstHeader.append(temp[0])
+          print(" | ".join(lstHeader))
+          print("="*120)
 
-      print("\nFetched {} lines.\n".format(iLineNum))
-  else:
-    print("Query exected successfully")
+          for dbRow in dbCursor:
+            strLine = ""
+            for field in dbRow:
+              strLine += str(field) + " | "
+            print(strLine[:-3])
+            iLineNum += 1
+
+          print("\nFetched {} lines.\n".format(iLineNum))
+      else:
+        print("Query exected successfully")
+    if dbConn is not None:
+      dbConn.close()
 
   tStop = time.time()
   iElapseSec = tStop - tStart
@@ -144,8 +191,9 @@ def main():
       iElapseSec, iHours, iMin, iSec))
   print("{} completed successfully on {}".format(
       strScriptName, strScriptHost))
-  if dbConn is not None:
-    dbConn.close()
+
+
+
 
 
 if __name__ == '__main__':
