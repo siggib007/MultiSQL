@@ -5,7 +5,7 @@ Contains two functions, one for connecting and another for executing queries
 Author Siggi Bjarnason Copyright 2022
 
 
-Uses the following packages
+Uses the following packages, which CheckDependency will try to install if missing
 pip install pymysql
 pip install pyodbc
 pip install psycopg2
@@ -14,6 +14,29 @@ pip install psycopg2
 import subprocess
 import sys
 import os
+
+def CheckDependency(Module):
+  """
+  Function that installs missing depedencies
+  Parameters:
+    Module : The name of the module that should be installed
+  Returns:
+    Integer 0 for "all good", non-zero for failure
+  """
+  lstOutput = subprocess.run(
+      [sys.executable, "-m", "pip", "list"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  dictComponents = {}
+  lstLines = lstOutput.stdout.decode("utf-8").splitlines()
+  for strLine in lstLines:
+    lstParts = strLine.split()
+    dictComponents[lstParts[0].lower()] = lstParts[1]
+  strModule = Module
+  if strModule.lower() not in dictComponents:
+    lstOutput = subprocess.run(
+        [sys.executable, "-m", "pip", "install", strModule], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return lstOutput.returncode
+  else:
+    return 0
 
 
 def Conn (*,DBType,Server,DBUser="",DBPWD="",Database=""):
@@ -37,13 +60,12 @@ def Conn (*,DBType,Server,DBUser="",DBPWD="",Database=""):
   strDBPWD = DBPWD
   strInitialDB = Database
 
-  global dboErr
-  global dbo
+  if strServer == "":
+    return "Servername can't be empty"
 
   try:
     if strDBType == "sqlite":
       import sqlite3
-      from sqlite3 import Error as dboErr
       strVault = strServer
       strVault = strVault.replace("\\", "/")
       if strVault[-1:] == "/":
@@ -59,15 +81,9 @@ def Conn (*,DBType,Server,DBUser="",DBPWD="",Database=""):
 
   try:
     if strDBType == "mssql":
-      try:
-        import pyodbc as dbo
-      except ImportError:
-        subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", 'pyodbc'])
-      finally:
-        import pyodbc as dbo
-      
-      import pyodbc as dboErr
+      if CheckDependency("pyodbc") != 0:
+        return "failed to install pyodbc. Please pip install pyodbc before using MS SQL option."
+      import pyodbc as dbo
       if strDBUser == "":
         strConnect = (" DRIVER={{ODBC Driver 17 for SQL Server}};"
                       " SERVER={};"
@@ -81,35 +97,20 @@ def Conn (*,DBType,Server,DBUser="",DBPWD="",Database=""):
                       " PWD={};".format(strServer,strInitialDB,strDBUser,strDBPWD))
       return dbo.connect(strConnect)
     elif strDBType == "mysql":
-      try:
-        import pymysql as dbo
-      except ImportError:
-        subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", 'pymysql'])
-      finally:
-        import pymysql as dbo
+      if CheckDependency("pymysql") != 0:
+        return "failed to install pymysql. Please pip install pymysql before using mySQL option."
+      import pymysql as dbo
       from pymysql import err as dboErr
       return dbo.connect(host=strServer,user=strDBUser,password=strDBPWD,db=strInitialDB)
     elif strDBType == "postgres":
-      try:
-        import psycopg2 as dbo
-      except ImportError:
-        subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", 'psycopg2'])
-      finally:
-        import psycopg2 as dbo
-      import psycopg2 as dboErr
+      if CheckDependency("psycopg2-binary") != 0:
+        return "failed to install psycopg2-binary. Please pip install psycopg2-binary before using PostgreSQL option."
+      import psycopg2 as dbo
       return dbo.connect(host=strServer, user=strDBUser, password=strDBPWD, database=strInitialDB)
     else:
       return ("Unknown database type: {}".format(strDBType))
-  except dboErr.InternalError as err:
+  except Exception as err:
     return ("Error: unable to connect: {}".format(err))
-  except dboErr.OperationalError as err:
-    return ("Operational Error: unable to connect: {}".format(err))
-  except dboErr.ProgrammingError as err:
-    return ("Programing Error: unable to connect: {}".format(err))
-  except dboErr.InterfaceError as err:
-    return ("Interface Error: unable to connect: {}".format(err))
 
 def Query (*,SQL,dbConn):
   """

@@ -87,9 +87,11 @@ def main():
       LogEntry("Type {} is unexpected".format(dictColumn[strCol][0]))
 
   for strDBType in lstDBTypes:
+    print("\n******Testing {}******\n".format(strDBType))
     iLineNum = 0
     if strDBType == "sqlite":
       strServer = strVault
+    print("Attempting {} connection to {} using username {}".format(strDBType,strServer,strDBUser))
     dbConn = MultiSQL.Conn(DBType=strDBType, Server=strServer,
                          DBUser=strDBUser, DBPWD=strDBPWD, Database=strInitialDB)
     if isinstance(dbConn,str):
