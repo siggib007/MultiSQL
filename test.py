@@ -40,7 +40,6 @@ def LogEntry(strMsg, bAbort=False):
       dbConn.close()
     sys.exit(9)
 
-
 def main():
   global strScriptName
   global strScriptHost
@@ -85,7 +84,7 @@ def main():
     elif dictColumn[strCol][0] == "int":
       dictValues[strCol] = str(random.randint(10, 50))
     else:
-      print("Type {} is unexpected".format(dictColumn[strCol][0]))
+      LogEntry("Type {} is unexpected".format(dictColumn[strCol][0]))
 
   for strDBType in lstDBTypes:
     iLineNum = 0
@@ -107,28 +106,31 @@ def main():
         strColType = " ".join(dictColumn[strCol])
       strTableCreate += "{} {}, ".format(strCol,strColType)
     strTableCreate = strTableCreate[:-2] + ");"
-    print(strTableCreate)
+    LogEntry(strTableCreate)
     strDataInsert = "INSERT INTO {}({}) VALUES({});".format(
         strTable, ",".join(dictColumn.keys()), ",".join(dictValues.values()))
-    print(strDataInsert)
+    LogEntry(strDataInsert)
     lstKeys = list(dictColumn.keys())
     lstValues = list(dictValues.values())
     strDataUpdate = "UPDATE {} SET {} = {}, {} = {} WHERE {} = {}".format(
         strTable, lstKeys[1], lstValues[2], lstKeys[2], lstValues[1], lstKeys[0], lstValues[0])
-    print(strDataUpdate)
+    LogEntry(strDataUpdate)
     strDataDelete = "DELETE FROM {} WHERE {} = {}".format(
         strTable, lstKeys[0], lstValues[0])
-    print(strDataDelete)
+    LogEntry(strDataDelete)
     strDataSelect = "SELECT {} FROM {};".format(
         ", ".join(dictColumn.keys()), strTable)
-    print(strDataSelect)
+    LogEntry(strDataSelect)
 
     if dbConn is not None:
       LogEntry("{} Database connection established to DB {} on server {}".format(
           strDBType, strInitialDB, strServer))
       LogEntry("Executing the query : {}".format(strTableCreate))
       if strDBType == "mssql":
+        LogEntry(
+            "Since this is MS SQL and we are creating a table, need to check if the table exists")
         strSQL = "select OBJECT_ID('{}', 'U')".format(strTable)
+        LogEntry("Executing the query : {}".format(strSQL))
         dbCursor = MultiSQL.Query(SQL=strSQL, dbConn=dbConn)
         strReturn = dbCursor.fetchone()
         if strReturn[0] is None:
@@ -141,31 +143,41 @@ def main():
       else:
         dbCursor = MultiSQL.Query(SQL=strTableCreate, dbConn=dbConn)
 
-      print("Now Executing {}".format(strDataInsert))
-      dbCursor = MultiSQL.Query(SQL=strDataInsert, dbConn=dbConn)
-      print("Query complete.")
       if isinstance(dbCursor, str):
         LogEntry("Results is only the following string: {}".format(dbCursor))
+      else:
+        print("Query complete.")
+
+      print("Now Executing {}".format(strDataInsert))
+      dbCursor = MultiSQL.Query(SQL=strDataInsert, dbConn=dbConn)
+      if isinstance(dbCursor, str):
+        LogEntry("Results is only the following string: {}".format(dbCursor))
+      else:
+        print("Query complete.")
       print("Now Executing {}".format(strDataUpdate))
       dbCursor = MultiSQL.Query(SQL=strDataUpdate, dbConn=dbConn)
-      print("Query complete.")
       if isinstance(dbCursor, str):
         LogEntry("Results is only the following string: {}".format(dbCursor))
+      else:
+        print("Query complete.")
       print("Now Executing {}".format(strDataDelete))
       dbCursor = MultiSQL.Query(SQL=strDataDelete, dbConn=dbConn)
-      print("Query complete.")
       if isinstance(dbCursor, str):
         LogEntry("Results is only the following string: {}".format(dbCursor))
+      else:
+        print("Query complete.")
       print("Now Executing {}".format(strDataInsert))
       dbCursor = MultiSQL.Query(SQL=strDataInsert, dbConn=dbConn)
-      print("Query complete.")
       if isinstance(dbCursor, str):
         LogEntry("Results is only the following string: {}".format(dbCursor))
+      else:
+        print("Query complete.")
       print("Now Executing {}".format(strDataSelect))
       dbCursor = MultiSQL.Query(SQL=strDataSelect, dbConn=dbConn)
-      print("Query complete.")
       if isinstance(dbCursor, str):
         LogEntry("Results is only the following string: {}".format(dbCursor))
+      else:
+        print("Query complete.")
 
       if isinstance(dbCursor, str):
         continue

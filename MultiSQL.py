@@ -131,15 +131,5 @@ def Query (*,SQL,dbConn):
       return None
     else:
       return dbCursor
-  except dboErr.InternalError as err:
-    return "Internal Error: unable to execute: {}\n{}\nLength of SQL statement {}\n".format(err,strSQL[:255],len(strSQL))
-  except dboErr.ProgrammingError as err:
-    return "Programing Error: unable to execute: {}\n{}\nLength of SQL statement {}\n".format(err,strSQL[:255],len(strSQL))
-  except dboErr.OperationalError as err:
-    return "Programing Error: unable to execute: {}\n{}\nLength of SQL statement {}\n".format(err,strSQL[:255],len(strSQL))
-  except dboErr.IntegrityError as err:
-    return "Integrity Error: unable to execute: {}\n{}\nLength of SQL statement {}\n".format(err,strSQL[:255],len(strSQL))
-  except dboErr.DataError as err:
-    return "Data Error: unable to execute: {}\n{}\nLength of SQL statement {}\n".format(err,strSQL[:255],len(strSQL))
-  except dboErr.InterfaceError as err:
-    return "Interface Error: unable to execute: {}\n{}\nLength of SQL statement {}\n".format(err,strSQL[:255],len(strSQL))
+  except Exception as err:
+    return "Failed to execute query: {}\n{}\nLength of SQL statement {}\n".format(err,strSQL[:255],len(strSQL))
