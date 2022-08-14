@@ -108,21 +108,21 @@ def main():
         strColType = " ".join(dictColumn[strCol])
       strTableCreate += "{} {}, ".format(strCol,strColType)
     strTableCreate = strTableCreate[:-2] + ");"
-    LogEntry(strTableCreate)
+    #LogEntry(strTableCreate)
     strDataInsert = "INSERT INTO {}({}) VALUES({});".format(
         strTable, ",".join(dictColumn.keys()), ",".join(dictValues.values()))
-    LogEntry(strDataInsert)
+    #LogEntry(strDataInsert)
     lstKeys = list(dictColumn.keys())
     lstValues = list(dictValues.values())
     strDataUpdate = "UPDATE {} SET {} = {}, {} = {} WHERE {} = {}".format(
         strTable, lstKeys[1], lstValues[2], lstKeys[2], lstValues[1], lstKeys[0], lstValues[0])
-    LogEntry(strDataUpdate)
+    #LogEntry(strDataUpdate)
     strDataDelete = "DELETE FROM {} WHERE {} = {}".format(
         strTable, lstKeys[0], lstValues[0])
-    LogEntry(strDataDelete)
+    #LogEntry(strDataDelete)
     strDataSelect = "SELECT {} FROM {};".format(
         ", ".join(dictColumn.keys()), strTable)
-    LogEntry(strDataSelect)
+    #LogEntry(strDataSelect)
 
     if dbConn is not None:
       LogEntry("{} Database connection established to DB {} on server {}".format(

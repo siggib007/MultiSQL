@@ -21,22 +21,49 @@ def CheckDependency(Module):
   Parameters:
     Module : The name of the module that should be installed
   Returns:
-    Integer 0 for "all good", non-zero for failure
+    dictionary object without output from the installation.
+      if the module needed to be installed
+        code: Return code from the installation
+        stdout: output from the installation
+        stderr: errors from the installation
+        args: list object with the arguments used during installation
+        success: true/false boolean indicating success.
+      if module was already installed so no action was taken
+        code: -5
+        stdout: Simple String: {module} version {x.y.z} already installed
+        stderr: Nonetype
+        args: module name as passed in
+        success: True as a boolean
   """
+  dictComponents = {}
+  dictReturn = {}
+  strModule = Module
   lstOutput = subprocess.run(
       [sys.executable, "-m", "pip", "list"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-  dictComponents = {}
   lstLines = lstOutput.stdout.decode("utf-8").splitlines()
   for strLine in lstLines:
     lstParts = strLine.split()
     dictComponents[lstParts[0].lower()] = lstParts[1]
-  strModule = Module
   if strModule.lower() not in dictComponents:
     lstOutput = subprocess.run(
         [sys.executable, "-m", "pip", "install", strModule], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    return lstOutput.returncode
+    dictReturn["code"] = lstOutput.returncode
+    dictReturn["stdout"] = lstOutput.stdout.decode("utf-8")
+    dictReturn["stderr"] = lstOutput.stderr.decode("utf-8")
+    dictReturn["args"] = lstOutput.args
+    if lstOutput.returncode == 0:
+      dictReturn["success"] = True
+    else:
+      dictReturn["success"] = False
+    return dictReturn
   else:
-    return 0
+    dictReturn["code"] = -5
+    dictReturn["stdout"] = "{} version {} already installed".format(
+        strModule, dictComponents[strModule.lower()])
+    dictReturn["stderr"] = None
+    dictReturn["args"] = strModule
+    dictReturn["success"] = True
+    return dictReturn
 
 
 def Conn (*,DBType,Server,DBUser="",DBPWD="",Database=""):
@@ -53,7 +80,6 @@ def Conn (*,DBType,Server,DBUser="",DBPWD="",Database=""):
   Returns:
     Connection object to be used by query function, or an error string
   """
-
   strDBType = DBType
   strServer = Server
   strDBUser = DBUser
@@ -81,7 +107,7 @@ def Conn (*,DBType,Server,DBUser="",DBPWD="",Database=""):
 
   try:
     if strDBType == "mssql":
-      if CheckDependency("pyodbc") != 0:
+      if not CheckDependency("pyodbc")["success"]:
         return "failed to install pyodbc. Please pip install pyodbc before using MS SQL option."
       import pyodbc as dbo
       if strDBUser == "":
@@ -97,13 +123,13 @@ def Conn (*,DBType,Server,DBUser="",DBPWD="",Database=""):
                       " PWD={};".format(strServer,strInitialDB,strDBUser,strDBPWD))
       return dbo.connect(strConnect)
     elif strDBType == "mysql":
-      if CheckDependency("pymysql") != 0:
+      if not CheckDependency("pymysql")["success"]:
         return "failed to install pymysql. Please pip install pymysql before using mySQL option."
       import pymysql as dbo
       from pymysql import err as dboErr
       return dbo.connect(host=strServer,user=strDBUser,password=strDBPWD,db=strInitialDB)
     elif strDBType == "postgres":
-      if CheckDependency("psycopg2-binary") != 0:
+      if not CheckDependency("psycopg2-binary")["success"]:
         return "failed to install psycopg2-binary. Please pip install psycopg2-binary before using PostgreSQL option."
       import psycopg2 as dbo
       return dbo.connect(host=strServer, user=strDBUser, password=strDBPWD, database=strInitialDB)
